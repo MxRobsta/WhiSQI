@@ -34,7 +34,7 @@ class PoolAttFF(torch.nn.Module):
         
         return x  
 
-class CPC3Transformer(nn.Module):
+class cpcTransformer(nn.Module):
     def __init__(self, model_type=None, whisq_ckpt=None):
         super().__init__()
 
@@ -63,7 +63,7 @@ class CPC3Transformer(nn.Module):
 
         return score.squeeze(-1)
 
-class CPC3LSTM(nn.Module):
+class cpcLSTM(nn.Module):
     def __init__(
         self, hidden_size, feat_seq=1500):
         super().__init__()

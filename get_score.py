@@ -24,10 +24,10 @@ def get_score(audio_file: str, model_type: str) -> torch.Tensor:
 
     if model_type == "single":
         model = whisperMetricPredictorEncoderLayersTransformerSmall()
-        model.load_state_dict(torch.load("checkpoints/single_head_model.pt",map_location=device))
+        model.load_state_dict(torch.load("src/WhiSQI/checkpoints/single_head_model.pt",map_location=device))
     elif model_type == "multi":
         model = whisperMetricPredictorEncoderLayersTransformerSmalldim()
-        model.load_state_dict(torch.load("checkpoints/multi_head_model.pt",map_location=device))
+        model.load_state_dict(torch.load("src/WhiSQI/checkpoints/multi_head_model.pt",map_location=device))
     else:
         raise ValueError("Model type not supported")
 

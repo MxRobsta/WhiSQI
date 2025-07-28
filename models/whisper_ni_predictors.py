@@ -1,14 +1,9 @@
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
-try:
-    from whisper_wrapper import WhisperWrapper_full,WhisperWrapper_encoder,pad_or_trim, log_mel_spectrogram
-    from transformer_wrapper import TransformerWrapper
-    from transformer_config import CenterCrop,Config,Input
-except:
-    from models.whisper_wrapper import WhisperWrapper_full,WhisperWrapper_encoder, pad_or_trim, log_mel_spectrogram
-    from models.transformer_wrapper import TransformerWrapper
-    from models.transformer_config import CenterCrop,Config,Input    
+from WhiSQI.models.whisper_wrapper import WhisperWrapper_full,WhisperWrapper_encoder, pad_or_trim, log_mel_spectrogram
+from WhiSQI.models.transformer_wrapper import TransformerWrapper
+from WhiSQI.models.transformer_config import CenterCrop,Config,Input    
 
 class PoolAttFF(torch.nn.Module):
     '''
@@ -39,7 +34,66 @@ class PoolAttFF(torch.nn.Module):
         
         return x  
 
+class CPC3Transformer(nn.Module):
+    def __init__(self, model_type=None, whisq_ckpt=None):
+        super().__init__()
 
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.whisqa = whisperMetricPredictorEncoderLayersTransformerSmalldim()
+
+        if whisq_ckpt is not None:
+            ckpt = torch.load(whisq_ckpt, map_location=device, weights_only=False)
+            self.whisqa.load_state_dict(ckpt)
+
+        if model_type == "multi":
+            self.linear = nn.Linear(5, 1)
+        else:
+            self.linear = nn.Linear(1, 1)
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, audio):
+        score = (self.whisqa(audio) * 5 - 1) / 4
+
+        if score.ndim == 3:
+            score = score.squeeze(-1)
+
+        score = self.linear(score)
+        score = self.sigmoid(score)
+
+        return score.squeeze(-1)
+
+class CPC3LSTM(nn.Module):
+    def __init__(
+        self, hidden_size, feat_seq=1500):
+        super().__init__()
+        self.norm_input = nn.BatchNorm1d(768)
+
+        self.feat_extract = WhisperWrapper_encoder(use_feat_extractor=True)
+        self.feat_extract.requires_grad_(False)
+
+        self.blstm = nn.LSTM(
+            input_size=768,
+            hidden_size=hidden_size,
+            num_layers=2,
+            dropout=0.1,
+            bidirectional=True,
+            batch_first=True,
+        )
+
+        self.attenPool = PoolAttFF(hidden_size * 2)
+        
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+    
+        out_feats = self.feat_extract(x) #whisper encoder returns (B, 1500, 512)
+        out_feats = self.norm_input(out_feats.permute(0,2,1)).permute(0,2,1) #normalize and permute back to (B, 1500, 512)
+        out, _ = self.blstm(out_feats) # transformer returns (B, 1500, 256)
+        
+        out = self.attenPool(out) #attenPool returns (B, 1)
+        out = self.sigmoid(out) #sigmoid returns (B, 1)
+        return out.squeeze(1)
 
     
 class whisperMetricPredictorEncoderTransformerSmall(nn.Module):

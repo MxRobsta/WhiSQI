@@ -2,7 +2,7 @@ from torch import nn
 import torch
 from typing import Optional
 
-from WhiSQI.models.wavLM_wrapper import WavLMFull_all
+from WhiSQI.models.wavLM_wrapper import WavLMfeatureExtractor_layers
 
 class PoolAttFF(nn.Module):
     '''
@@ -39,7 +39,7 @@ class cpcWavLMLSTMLayers(nn.Module):
         super().__init__()
         self.norm_input = nn.BatchNorm1d(768)
 
-        self.feat_extract = WavLMFull_all()
+        self.feat_extract = WavLMfeatureExtractor_layers()
         self.feat_extract.requires_grad_(False)
 
         self.layer_weights = nn.Parameter(torch.ones(13))

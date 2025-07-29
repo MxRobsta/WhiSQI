@@ -37,16 +37,16 @@ class cpcWavLMLSTMLayers(nn.Module):
     def __init__(
         self, hidden_size):
         super().__init__()
-        self.norm_input = nn.BatchNorm1d(768)
+        self.norm_input = nn.BatchNorm1d(512)
 
         self.feat_extract = WavLMfeatureExtractor_layers()
         self.feat_extract.requires_grad_(False)
 
-        self.layer_weights = nn.Parameter(torch.ones(13))
+        self.layer_weights = nn.Parameter(torch.ones(7))
         self.softmax = nn.Softmax(dim=0)
 
         self.blstm = nn.LSTM(
-            input_size=768,
+            input_size=512,
             hidden_size=hidden_size,
             num_layers=2,
             dropout=0.1,

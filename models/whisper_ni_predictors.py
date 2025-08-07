@@ -130,7 +130,36 @@ class cpcLSTMLayers(nn.Module):
         out = self.attenPool(out) #attenPool returns (B, 1)
         out = self.sigmoid(out) #sigmoid returns (B, 1)
         return out.squeeze(1)
+
+class cpcLinearLayers(nn.Module):
+    def __init__(
+        self, hidden_size, feat_seq=1500):
+        super().__init__()
+        self.norm_input = nn.BatchNorm1d(768)
+
+        self.feat_extract = WhisperWrapper_encoder(use_feat_extractor=True, layer=-1)
+        self.feat_extract.requires_grad_(False)
+
+        self.layer_weights = nn.Parameter(torch.ones(13))
+        self.softmax = nn.Softmax(dim=0)
+
+        self.linear = nn.Linear(768, hidden_size)
+
+        self.attenPool = PoolAttFF(hidden_size)
+        
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x, lengths=None):
     
+        out_feats = self.feat_extract(x) #whisper encoder returns (B, 1500, 512)
+        out_feats = out_feats @ self.softmax(self.layer_weights) #weighted sum of the 13 tensors
+        out_feats = self.norm_input(out_feats.permute(0,2,1)).permute(0,2,1) #normalize and permute back to (B, 1500, 512)
+        out = self.linear(out_feats) # transformer returns (B, 1500, 256)
+        
+        out = self.attenPool(out) #attenPool returns (B, 1)
+        out = self.sigmoid(out) #sigmoid returns (B, 1)
+        return out.squeeze(1)
+
 class whisperMetricPredictorEncoderTransformerSmall(nn.Module):
     """Transformer based varient on metric estimator
 
